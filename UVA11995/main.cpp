@@ -8,30 +8,47 @@
 #include <iostream>
 using namespace std;
 
-#define DEBUGGING
+//NOTA: Antes de nada me gustaría disculparme por si parece que mis anotaciones son algo "bizarras". Las voy escribiendo para aclararme, 
+//      y me gusta dejarlas para dejar bien claro por qué hago las cosas de cierta manera.
 
-/************************************************************************************************************************
- * Herramientes para depuración                                                                                         *
- *                                                                                                                      *
- * Las cabeceras utilizadas para depuración se encuentran en el subdirectorio utils/, no incluido en la entrega.        *
- * Me he acostumbrado a utilizar estas macros para depurar: En un primer momento utilizo mi versión de assert,          *
- * el cual escribe los resultados en pantalla, y cuando estoy más o menos seguro, activo el assert de C.                *
- *                                                                                                                      *
- * Mi versión de assert incluye una versión que pinta los errores en rojo. Dicha versión utiliza un sencillo sistema de *
- * cambio de estilo de la consola basado en interfaces fluidas. Solo tengo implementada la versión para windows.        *
- *                                                                                                                      *
- * Cuento todo ésto para pasar por encima todas las "cosas raras" que puedan encontrarse durante la corrección.         *
- *                                                                                                                      *
- * Desactivando el modo de depuración, se deshabilitan todos esos includes (Para seguir a rajatabla las reglas de la    *
- * entrega) y se deshabilita también la macro assert.                                                                   *
- ***********************************************************************************************************************/
+/***********************************************************************************************************************
+* Herramientes para depuración                                                                                         *
+*                                                                                                                      *
+* Las cabeceras utilizadas para depuración se encuentran en el subdirectorio utils/, no incluido en la entrega.        *
+* Los archivos en cuestión son:                                                                                        *
+*  - dl32Config.h: Es el archivo de configuración general. Lo necesitan el resto de cabeceras.                         *
+*    https://github.com/Manu343726/cpp_lib32/blob/BigRefactoring/code/headers/utils/dl32Config.h                       * 
+*  - dl322Exceptions.h: Archivo con las definiciones de excepciones básicas. Lo mismo, necesario para el resto.        *
+*    https://github.com/Manu343726/cpp_lib32/blob/BigRefactoring/code/headers/dl32Exceptions.h                         *
+*  - dl32ConsoleColor.h: Sistema de cambio de estilo (Color de fuente/fondo) de consola basado en interfaces fluidas.  *  
+*    Lo uso en mi assert, y para depurar (Con colorines todo se ve mas claro...).                                      *
+*    https://github.com/Manu343726/cpp_lib32/blob/BigRefactoring/code/headers/utils/dl32ConsoleColor.h                 *
+*  - dl32ConsoleColor.cpp Implementación del sistema. Solo versión para windows (Por ahora).                           *
+*    https://github.com/Manu343726/cpp_lib32/blob/BigRefactoring/code/source/utils/dl32ConsoleColor.cpp                *
+*                                                                                                                      *
+* NOTA: Estos archivos han sido modificados ligeramente para hacerlos compatibles con C++98/03.                        *
+*                                                                                                                      *
+* Me he acostumbrado a utilizar estas macros para depurar: En un primer momento utilizo mi versión de assert,          *
+* el cual escribe los resultados en pantalla, y cuando estoy más o menos seguro, activo el assert de C.                *
+*                                                                                                                      *
+* Cuento todo ésto para pasar por encima todas las "cosas raras" que puedan encontrarse durante la corrección.         *
+*                                                                                                                      *
+* Desactivando el modo de depuración, se deshabilitan todos esos includes (Para seguir a rajatabla las reglas de la    *
+* entrega) y se deshabilita también la macro assert.                                                                   *
+***********************************************************************************************************************/
+
+//#define DEBUGGING
+
 #ifdef DEBUGGING
 
 #include "utils/dl32Config.h" //Booleanos, entre otras cosas
+#include "utils/dl32ConsoleColor.h" //Colorines para depurar
 
 #define DEBUGGING_USECASSERT  FALSE
 #define DEBUGGING_WAIT_AT_END FALSE
 #define DEBUGGING_USE_COLOR   TRUE
+#define DEBUGGING_ASSERT_LONG_FORMAT FALSE
+
 
 #define EXPAND(x) x
 
@@ -43,17 +60,21 @@ using namespace std;
 #include <assert.h>
 #else
 
-#define assert_data(x) __FILE__ << ", in function " << __FUNCTION__  << " (line " <<  __LINE__ << "):" << " '" << #x << "' --> "
+#if DEBUGGING_ASSERT_LONG_FORMAT
+#define assert_data(x) __FILE__ << ", in function '" << __FUNCTION__  << "' (line " <<  __LINE__ << "):" << " '" << #x << "' --> "
+#else 
+#define assert_data(x) "'" << #x << "' --> "
+#endif /* SHORT FORMAT */
 
 #if DEBUGGING_USE_COLOR
 
-#include "utils/dl32ConsoleColor.h" //NOTA: Implementación basada únicamente en Win32 API. Versión UNIX no disponible todavía.
+//#include "utils/dl32ConsoleColor.h" //NOTA: Implementación basada únicamente en Win32 API. Versión UNIX no disponible todavía.
 
 #ifdef assert
 #undef assert
 #endif /* ASSERT */
 
-#define assert(x) (x) ? cout << assert_data(x) << "SUCCESS" << endl : cout << push_style << dl32ChangeForegroundColor( RED ) << assert_data(x) << "FAIL (Cascao raro)" << pop_style << endl 
+#define assert(x) (x) ? cout << push_style << dl32ChangeForegroundColor( LIGHTGREEN )  << assert_data(x) << "SUCCESS" << pop_style << endl : cout << push_style << dl32ChangeForegroundColor( LIGHTRED ) << assert_data(x) << "FAIL (Cascao raro)" << pop_style << endl 
 #else
 
 #ifdef assert
@@ -68,6 +89,9 @@ using namespace std;
 #define assert(x)
 #endif /* DEBUGGING */
 
+/********************************
+ * WARNING: ENTERING FREAK-ZONE *
+ *******************************/
 
 /* enable_if necesario para wrapper de iterador (operator-> solo tiene sentido para clases, no para tipos básicos) */
 template<bool flag, typename T>
@@ -76,7 +100,7 @@ struct enable_if;
 template<typename T>
 struct enable_if<true, T>
 {
-    typedef T type;
+    typedef T type; //Hay, como echo de menos mi using...
 };
 
 template<typename T>
@@ -93,17 +117,21 @@ private:
 
     typedef class
     {
-        char dummy[2];
+        char dummy[2];//El tamaño exacto depende de la implementación/SO, pero si sabes que siempre es mas grande que el otro, que es lo que importa.
     } _big;
 
     static const unsigned int _small_size = sizeof (_small);
-    static const unsigned int _big_size = sizeof (_big);
+    static const unsigned int _big_size   = sizeof (_big);
 
     template<typename U> static _small _checker(void(U::*)());
-    template<typename U> static _big _checker(...);
+    template<typename U> static _big   _checker(...);
 public:
     static const bool value = sizeof ( _checker<T>(NULL)) == _small_size;
 };
+
+/*********************
+ * END OF FREAK-ZONE *
+ ********************/
 
 /******************************************************************************************************************
  *  _                       _                                               _                                   _  *
@@ -116,27 +144,13 @@ public:
 
 /* "#include TADs EDA" */
 
+//NOTA: He parloteado tanto que no me cabía el código en la UVA. He borrado la documentación de los TADs.
+
 /* EXCEPCIONES */
-
-/*
-  Definición de algunas excepciones de las distintas
-  implementaciones de los TADs.
-
-  Estructura de Datos y Algoritmos
-  Facultad de Informática
-  Universidad Complutense de Madrid
-
- (c) Marco Antonio Gómez Martín, 2012
- */
 
 #include <string>
 #include <iosfwd>
 
-/**
- Clase de la que heredan todas las excepciones, y
- que proporciona el atributo que almacena el
- mensaje de error.
- */
 class ExcepcionTAD
 {
 public:
@@ -177,292 +191,18 @@ Excepcion() {}; \
 Excepcion(const std::string &msg) : ExcepcionTAD(msg) {} \
 };
 
-/**
- Excepción generada por algunas operaciones de las pilas.
- */
 DECLARA_EXCEPCION(EPilaVacia);
-
-/**
- Excepción generada por algunas operaciones de las pilas.
- */
 DECLARA_EXCEPCION(EPilaLlena);
-
-/**
- Excepción generada por algunas de las operaciones de las colas.
- */
 DECLARA_EXCEPCION(EColaVacia);
-
-/**
- Excepción generada por algunas operaciones de las colas dobles.
- */
 DECLARA_EXCEPCION(EDColaVacia);
-
-/**
- Excepción generada por algunas operaciones de las listas.
- */
 DECLARA_EXCEPCION(EListaVacia);
-
-/**
- Excepción generada por accesos incorrectos a las listas
- (tanto a un número de elemento incorrecto como por
- mal manejo de los iteradores).
- */
 DECLARA_EXCEPCION(EAccesoInvalido);
 
-/* PILA */
-
-/**
-  @file Pila.h
-
-  Implementación del TAD Pila utilizando un
-  vector dinámico cuyo tamaño va creciendo si
-  es necesario.
-
-  Estructura de Datos y Algoritmos
-  Facultad de Informática
-  Universidad Complutense de Madrid
-
- (c) Marco Antonio Gómez Martín, 2012
- */
-
-/**
- Implementación del TAD Pila utilizando vectores dinámicos.
-
- Las operaciones son:
-
- - PilaVacia: -> Pila. Generadora implementada en el
-   constructor sin parámetros.
- - apila: Pila, Elem -> Pila. Generadora
- - desapila: Pila - -> Pila. Modificadora parcial.
- - cima: Pila - -> Elem. Observadora parcial.
- - esVacia: Pila -> Bool. Observadora.
- - numElems: Pila -> Entero. Observadora.
-
- @author Marco Antonio Gómez Martín
- */
-template <class T>
-class Pila
-{
-public:
-
-    /** Tamaño inicial del vector dinámico. */
-    enum
-    {
-        TAM_INICIAL = 10
-    };
-
-    /** Constructor; operación PilaVacia */
-    Pila()
-    {
-        inicia();
-    }
-
-    /** Destructor; elimina el vector. */
-    ~Pila()
-    {
-        libera();
-    }
-
-    /**
-     Apila un elemento. Operación generadora.
-
-     @param elem Elemento a apilar.
-     */
-    void apila(const T &elem)
-    {
-        if (_numElems == _tam)
-            amplia();
-        _v[_numElems] = elem;
-        _numElems++;
-    }
-
-    /**
-     Desapila un elemento. Operación modificadora parcial,
-     que falla si la pila está vacía.
-
-     desapila(Apila(elem, p)) = p
-     error: desapila(PilaVacia)
-     */
-    void desapila()
-    {
-        if (esVacia())
-            throw EPilaVacia();
-        --_numElems;
-    }
-
-    /**
-     Devuelve el elemento en la cima de la pila. Operación
-     observadora parcial, que falla si la pila está vacía.
-
-     cima(Apila(elem, p) = elem
-     error: cima(PilaVacia)
-
-     @return Elemento en la cima de la pila.
-     */
-    const T &cima() const
-    {
-        if (esVacia())
-            throw EPilaVacia();
-        return _v[_numElems - 1];
-    }
-
-    /**
-     Devuelve true si la pila no tiene ningún elemento.
-
-     esVacia(PilaVacia) = true
-     esVacia(Apila(elem, p)) = false
-
-     @return true si la pila no tiene ningún elemento.
-     */
-    bool esVacia() const
-    {
-        return _numElems == 0;
-    }
-
-    /**
-     Devuelve el número de elementos que hay en la
-     pila.
-     numElems(PilaVacia) = 0
-     numElems(Apila(elem, p)) = 1 + numElems(p)
-
-     @return Número de elementos.
-     */
-    int numElems() const
-    {
-        return _numElems;
-    }
-
-    // //
-    // MÉTODOS DE "FONTANERÍA" DE C++ QUE HACEN VERSÁTIL
-    // A LA CLASE
-    // //
-
-    /** Constructor copia */
-    Pila(const Pila<T> &other)
-    {
-        copia(other);
-    }
-
-    /** Operador de asignación */
-    Pila<T> &operator=(const Pila<T> &other)
-    {
-        if (this != &other)
-        {
-            libera();
-            copia(other);
-        }
-        return *this;
-    }
-
-    /** Operador de comparación. */
-    bool operator==(const Pila<T> &rhs) const
-    {
-        if (_numElems != rhs._numElems)
-            return false;
-        for (unsigned int i = 0; i < _numElems; ++i)
-            if (_v[i] != rhs._v[i])
-                return false;
-        return true;
-    }
-
-    bool operator!=(const Pila<T> &rhs) const
-    {
-        return !(*this == rhs);
-    }
-
-protected:
-
-    void inicia()
-    {
-        _v = new T[TAM_INICIAL];
-        _tam = TAM_INICIAL;
-        _numElems = 0;
-    }
-
-    void libera()
-    {
-        delete []_v;
-        _v = NULL;
-    }
-
-    void copia(const Pila &other)
-    {
-        _tam = other._numElems + TAM_INICIAL;
-        _numElems = other._numElems;
-        _v = new T[_tam];
-        for (unsigned int i = 0; i < _numElems; ++i)
-            _v[i] = other._v[i];
-    }
-
-    void amplia()
-    {
-        T *viejo = _v;
-        _tam *= 2;
-        _v = new T[_tam];
-
-        for (unsigned int i = 0; i < _numElems; ++i)
-            _v[i] = viejo[i];
-
-        delete []viejo;
-    }
-
-private:
-
-    /** Puntero al array que contiene los datos. */
-    T *_v;
-
-    /** Tamaño del vector _v. */
-    unsigned int _tam;
-
-    /** Número de elementos reales guardados. */
-    unsigned int _numElems;
-};
-
 /* LISTA */
-
-/**
-  @file Lista.h
-
-  Implementación del TAD lista, utilizando una 
-  lista doblemente enlazada.
-
-  Estructura de Datos y Algoritmos
-  Facultad de Informática
-  Universidad Complutense de Madrid
-
- (c) Marco Antonio Gómez Martín, 2012
- */
-
-/**
- Implementación del TAD Lista utilizando una lista doblemente enlazada.
-
- Las operaciones son:
-
- - ListaVacia: -> Lista. Generadora implementada en el
-   constructor sin parámetros.
- - Cons: Lista, Elem -> Lista. Generadora.
- - ponDr: Lista, Elem -> Lista. Modificadora.
- - primero: Lista - -> Elem. Observadora parcial
- - resto: Lista - -> Lista. Modificadora parcial
- - ultimo: Lista - -> Elem. Observadora parcial
- - inicio: Lista - -> Lista. Modificadora parcial
- - esVacia: Lista -> Bool. Observadora
- - numElems: Lista -> Elem. Obervadora.
- - elem: Lista, Entero - -> Elem. Observador parcial.
-
- @author Marco Antonio Gómez Martín
- */
 template <class T>
 class Lista
 {
 private:
-
-    /**
-     Clase nodo que almacena internamente el elemento (de tipo T),
-     y dos punteros, uno al nodo anterior y otro al nodo siguiente.
-     Ambos punteros podrían ser NULL si el nodo es el primero
-     y/o último de la lista enlazada.
-     */
     class Nodo
     {
     public:
@@ -497,14 +237,6 @@ public:
     {
         libera();
     }
-
-    /**
-     Añade un nuevo elemento en la cabeza de la lista.
-     Operación generadora.
-
-     @param elem Elemento que se añade en la cabecera de
-     la lista.
-     */
     void Cons(const T &elem)
     {
         _numElems++;
@@ -512,14 +244,6 @@ public:
         if (_ult == NULL)
             _ult = _prim;
     }
-
-    /**
-     Añade un nuevo elemento al final de la lista (a la 
-     "derecha"). Operación modificadora.
-
-     ponDr(e, ListaVacia) = Cons(e, ListaVacia)
-     ponDr(e, Cons(x, xs)) = Cons(x, ponDr(e, xs))
-     */
     void ponDr(const T &elem)
     {
         _numElems++;
@@ -527,35 +251,12 @@ public:
         if (_prim == NULL)
             _prim = _ult;
     }
-
-    /**
-     Devuelve el valor almacenado en la cabecera de la
-     lista. Es un error preguntar por el primero de
-     una lista vacía.
-
-     primero(Cons(x, xs)) = x
-     error primero(ListaVacia)
-
-     @return Elemento en la cabecera de la lista.
-     */
     const T &primero() const
     {
         if (esVacia())
             throw EListaVacia();
         return _prim->_elem;
     }
-
-    /**
-     Devuelve el valor almacenado en la última posición
-     de la lista (a la derecha).
-     Es un error preguntar por el primero de una lista vacía.
-
-     ultimo(Cons(x, xs)) = x           SI esVacia(xs)
-     ultimo(Cons(x, xs)) = ultimo(xs)  SI !esVacia(xs)
-     error ultimo(ListaVacia)
-
-     @return Elemento en la cola de la lista.
-     */
     const T &ultimo() const
     {
         if (esVacia())
@@ -563,14 +264,6 @@ public:
 
         return _ult->_elem;
     }
-
-    /**
-     Elimina el primer elemento de la lista.
-     Es un error intentar obtener el resto de una lista vacía.
-
-     resto(Cons(x, xs)) = xs
-     error resto(ListaVacia)
-     */
     void resto()
     {
         if (esVacia())
@@ -583,15 +276,6 @@ public:
             _ult = NULL;
         --_numElems;
     }
-
-    /**
-     Elimina el último elemento de la lista.
-     Es un error intentar obtener el inicio de una lista vacía.
-
-     inicio(Cons(x, ListaVacia)) = ListaVacia
-     inicio(Cons(x, xs)) = Cons(x, inicio(xs)) SI !esVacia(xs)
-     error inicio(ListaVacia)
-     */
     void inicio()
     {
         if (esVacia())
@@ -604,48 +288,14 @@ public:
             _prim = NULL;
         --_numElems;
     }
-
-    /**
-     Operación observadora para saber si una lista
-     tiene o no elementos.
-
-     esVacia(ListaVacia) = true
-     esVacia(Cons(x, xs)) = false
-
-     @return true si la lista no tiene elementos.
-     */
     bool esVacia() const
     {
         return _prim == NULL;
     }
-
-    /**
-     Devuelve el número de elementos que hay en la
-     lista.
-     numElems(ListaVacia) = 0
-     numElems(Cons(x, xs)) = 1 + numElems(xs)
-
-     @return Número de elementos.
-     */
     unsigned int numElems() const
     {
         return _numElems;
     }
-
-    /**
-     Devuelve el elemento i-ésimo de la lista, teniendo
-     en cuenta que el primer elemento (primero())
-     es el elemento 0 y el último es numElems()-1,
-     es decir idx está en [0..numElems()-1].
-     Operación observadora parcial que puede fallar
-     si se da un índice incorrecto. El índice es
-     entero sin signo, para evitar que se puedan
-     pedir elementos negativos.
-
-     elem(0, Cons(x, xs)) = x
-     elem(n, Cons(x, xs)) = elem(n-1, xs) si n > 0
-     error elem(n, xs) si !( 0 <= n < numElems(xs) )
-     */
     const T &elem(unsigned int idx) const
     {
         if (idx >= _numElems)
@@ -657,12 +307,6 @@ public:
 
         return aux->_elem;
     }
-
-    /**
-     Clase interna que implementa un iterador sobre
-     la lista que permite recorrer la lista e incluso
-     alterar el valor de sus elementos.
-     */
     class Iterador
     {
     public:
@@ -710,12 +354,6 @@ public:
         // Puntero al nodo actual del recorrido
         Nodo *_act;
     };
-
-    /**
-     Devuelve el iterador al principio de la lista.
-     @return iterador al principio de la lista;
-     coincidirá con final() si la lista está vacía.
-     */
     Iterador principio()
     {
         return Iterador(_prim);
@@ -729,19 +367,6 @@ public:
     {
         return Iterador(NULL);
     }
-
-    /**
-     Permite eliminar de la lista el elemento
-     apuntado por el iterador que se pasa como parámetro.
-     El iterador recibido DEJA DE SER VÁLIDO. En su
-     lugar, deberá utilizarse el iterador devuelto, que
-     apuntará al siguiente elemento al borrado.
-     @param it Iterador colocado en el elemento que se
-     quiere borrar.
-     @return Nuevo iterador colocado en el elemento siguiente
-     al borrado (podría coincidir con final() si el
-     elemento que se borró era el último de la lista).
-     */
     Iterador borra(const Iterador &it)
     {
         if (it._act == NULL)
@@ -768,19 +393,6 @@ public:
             return Iterador(sig);
         }
     }
-
-    /**
-     Método para insertar un elemento en la lista
-     en el punto marcado por el iterador. En concreto,
-     se añade _justo antes_ que el elemento actual. Es
-     decir, si it==l.primero(), el elemento insertado se
-     convierte en el primer elemento (y el iterador
-     apuntará al segundo). Si it==l.final(), el elemento
-     insertado será el último (e it seguirá apuntando
-     fuera del recorrido).
-     @param elem Valor del elemento a insertar.
-     @param it Punto en el que insertar el elemento.
-     */
     void insertar(const T &elem, const Iterador &it)
     {
 
@@ -801,11 +413,6 @@ public:
             insertaElem(elem, it._act->_ant, it._act);
         }
     }
-
-    // //
-    // MÉTODOS DE "FONTANERÍA" DE C++ QUE HACEN VERSÁTIL
-    // A LA CLASE
-    // //
 
     /** Constructor copia */
     Lista(const Lista<T> &other) : _prim(NULL), _ult(NULL)
@@ -873,16 +480,6 @@ protected:
     }
 
 private:
-
-    /**
-     Inserta un elemento entre el nodo1 y el nodo2.
-     Devuelve el puntero al nodo creado.
-     Caso general: los dos nodos existen.
-        nodo1->_sig == nodo2
-        nodo2->_ant == nodo1
-     Casos especiales: alguno de los nodos no existe
-        nodo1 == NULL y/o nodo2 == NULL
-     */
     static Nodo *insertaElem(const T &e, Nodo *nodo1, Nodo *nodo2)
     {
         Nodo *nuevo = new Nodo(nodo1, e, nodo2);
@@ -892,14 +489,6 @@ private:
             nodo2->_ant = nuevo;
         return nuevo;
     }
-
-    /**
-     Elimina el nodo n. Si el nodo tiene nodos antes
-     o después, actualiza sus punteros anterior y siguiente.
-     Caso general: hay nodos anterior y siguiente.
-     Casos especiales: algunos de los nodos (anterior o siguiente
-     a n) no existen.
-     */
     static void borraElem(Nodo *n)
     {
         assert(n != NULL);
@@ -912,14 +501,6 @@ private:
         delete n;
     }
 
-    /**
-     Elimina todos los nodos de la lista enlazada cuyo
-     primer nodo se pasa como parámetro.
-     Se admite que el nodo sea NULL (no habrá nada que
-     liberar). En caso de pasarse un nodo válido,
-     su puntero al nodo anterior debe ser NULL (si no,
-     no sería el primero de la lista!).
-     */
     static void libera(Nodo *prim)
     {
         assert(!prim || !prim->_ant);
@@ -941,11 +522,18 @@ private:
 
 /* FIN "#include TADs EDA" */
 
-#define USE_STL FALSE
-
-#include <vector>
 #include <cmath>
 
+#define USE_STL
+
+#ifdef USE_STL
+#include <vector>
+#else
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Un wrapper de la lista enlazada de la asignatura para que tenga la misma interfaz que std::vector.
+///
+/// @author	Manu343726
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename T>
 class ListWrapper
 {
@@ -992,18 +580,11 @@ public:
         {
             return _underlying_iterator.elem();
         }
-
-        typename enable_if<is_class<T>::value, const T*>::type
-        operator->() //Efectos bastante graciosos de la compleja sintaxis de C++: http://stackoverflow.com/questions/1642028/what-is-the-name-of-this-operator Mientras x vaya hacia a cero, la verdad es que es ingenioso...
-        {
-            return &_underlying_iterator.elem();
-        }
     };
 
     iterator begin()
     {
         return iterator(_underlying_tad.principio());
-        /* RVO? quiero creer que si... */
     }
 
     iterator end()
@@ -1011,32 +592,32 @@ public:
         return iterator(_underlying_tad.final());
     }
 
-    unsigned int size()
+    unsigned int size() const
     {
         return _underlying_tad.numElems();
     }
 
-    bool empty()
+    bool empty() const
     {
         return _underlying_tad.esVacia();
     }
 
-    T& first()
+    T& front()
     {
-        return static_cast<T&> (_underlying_tad.primero());
+        return const_cast<T&> (_underlying_tad.primero());
     }
-
-    T& last()
+    
+    T& back()
     {
-        return static_cast<T&> (_underlying_tad.ultimo());
+        return const_cast<T&> (_underlying_tad.ultimo());
     }
 
-    T& operator[](unsigned int index) {
-        return static_cast<T&> (_underlying_tad.elem(index));
+    T& operator[](unsigned int index) 
+    {
+        return const_cast<T&> (_underlying_tad.elem(index));
     }
 
-    //O(n)...
-
+    //O(n)... Creo que al final no la uso (De hecho, creo que me la he inventado... que la de std::vector no es así...)
     void insert(const T& value, unsigned int index)
     {
         if (index < 0 || index >= size()) return;
@@ -1050,9 +631,14 @@ public:
         _underlying_tad.insertar(value, it);
     }
 
-    void insert(const T& value, iterator it)
+    void insert(const iterator& it , const T& value)
     {
         _underlying_tad.insertar(value, it._underlying_iterator);
+    }
+    
+    void erase(const iterator& it)
+    {
+        _underlying_tad.borra( it._underlying_iterator );
     }
 
     void push_back(const T& value)
@@ -1060,22 +646,49 @@ public:
         _underlying_tad.ponDr(value);
     }
 
-    void push_front(const T& value)
-    {
-        _underlying_tad.insertar(value, _underlying_tad.principio());
-    }
-
     void pop_back()
     {
-        _underlying_tad.borra(_underlying_tad.final());
+        _underlying_tad.inicio();//No es por criticar, pero no vendría nada mal una revisión de los nombres de los TADs, porque son de todo menos intuitivos. "inicio", una función que borra el último elemento? El nombre lo entiendo (Te quedas con la parte "inicial" de la lista), pero...
     }
 
-    void pop_front()
+    void pop_front()//Esta también me la he inventado, tampoco está en std::vector<T>
     {
-        _underlying_tad.borra(_underlying_tad.principio());
+        _underlying_tad.resto(); //No es por criticar, pero no vendría nada mal una revisión de los nombres de los TADs, porque son de todo menos intuitivos. "resto", una función que borra el primer elemento? 
     }
 };
+#endif
 
+/*
+ *Tampoco estaría mal, como comentaste el otro día en clase, incluir un vector. Mas que nada, porque en contra de lo que piensa la mayoría de 
+ *la gente, hoy en día las listas enlazadas son bastante más lentas que los vectores (La caché manda). 
+ * 
+ *He encontrado una entrada en stackoverflow (http://stackoverflow.com/questions/9764452/comprehensive-vector-vs-linked-list-benchmark-for-randomized-insertions-deletion) 
+ *donde mencionan el tema, precisamente hablando de la conferencia que te comenté en clase donde Stroupstrup hacía comparativas de rendimiento entre ambas cosas.
+ * 
+ *Precisamente una de las cosas en las que más insiste en las transparencias es en mantener los datos de manera lineal, cohesivos. No hacer las cosas al estilo
+ *"cada cosa en una punta" como hacen los lenguajes de alto nivel (C#/Java, punterolandia).
+ *Es cierto que los accesos son aleatorios, lo que implica O(n) en la lista enlazada. Pero, realmente ganas algo con la lista enlazada? Veamos:
+ * 
+ *        OPERACION                    |                              VECTOR                                                                                  |                 LISTA
+ * ------------------------------------+----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------
+ * push_back                           |  O(1) en la mayoría de los casos (Promedio).                                                                         |  O(1) (Lista doblemente enlazada). (Siempre alloc).
+ * push_front                          |  O(n) vale, aquí gana la lista por goleada. Por algo std::vector no lo implementa.                                   |  O(1) (Siempre alloc)
+ * pop_back                            |  O(1) (Promedio)                                                                                                     |  O(1) (Siempre alloc)
+ * pop_front                           |  O(n) Igual que su hermana, push_front. (VER NOTA INFERIOR).                                                         |  O(1) (siempre dealloc)
+ * erase (Random access)               |  O(n) NOTA: No recuerdo (No debería, mantiene el orden) si std::vector implementa swap-end, en ese caso sería O(1).  |  O(1) (Siempre dealloc)
+ * at (Aka operator[], random access)  |  O(1) más barato imposible.                                                                                          |  O(n) (+ penalización de caché)
+ * 
+ * La lista enlazada tiene dos problemas muy grandes: Caché (Puntero detrás de puntero...) y allocations (Para todas las operaciones hace alloc/dealloc, y las peticiones de memoria son muuuuuuy caras).
+ * Para acceso secuencial, es cierto que se pueden usar iteradores. Pero aún así el redimiento de vector sigue siendo superior (La lista es un tren de punteros, la caché se vuelve loca...).
+ * Y por supuesto, el uso de memoria: La lista utiliza 2* tamaño puntero por cada nodo, lo que se traduce en que suele ocupar mas del doble que vector.
+ * 
+ * Al final la conclusión a la que llegas, es que salvo para ciertas cosas (Implementación de colas y poco más) vector siempre gana por goleada (Al final lo que cuenta es el promedio, me da igual
+ * el caso peor, si en el 95% de los casos es bastante más rápido), para el tipo de accessos/operaciones que se suelen hacer.
+ * 
+ *Aunque no está muy claro, el timing que se ha hecho ésta gente sale acorde con ésto. Personalmente no me he puesto a hacer timmings por mi cuenta.
+ *
+ *PD: Me he fijado que el enlace que está en el post está roto (Es el enlace del MSDN es raro...La presentación está en Channel 9): http://www.ii.uni.wroc.pl/~nivelle/C++11_style_Wroclaw.pdf
+*/
 /*************************************************************
  * Implementación de cola de prioridad usando un heap máximo *
  ************************************************************/
@@ -1084,80 +697,148 @@ template<typename T>
 class MaxHeap
 {
 private:
-#if USE_STL
+#ifdef USE_STL
     std::vector<T> _heap_array;
 #else
     ListWrapper<T> _heap_array; //Uuuh, que elegante, ocupan lo mismo...
 #endif /* USE STL */
 
-    unsigned int _less_child(unsigned int parent)
+    static unsigned int _less_child(unsigned int parent)
     {
         return 2 * parent + 1;
     }
 
-    unsigned int _bigger_child(unsigned int parent)
+    static unsigned int _bigger_child(unsigned int parent)
     {
         return 2 * parent + 2;
     }
 
-    unsigned int _parent(unsigned int child)
+    static unsigned int _parent(unsigned int child)
     {
         return (unsigned int) std::floor(child / 2.0f);
     }
 
-    bool _is_root(unsigned int index)
+    static bool _is_root(unsigned int index)
     {
         return index == 0;
     }
-
+ 
+#ifdef DEBUGGING
+    dl32ConsoleColor _get_color(unsigned int i)
+    {
+        static const dl32ConsoleColor COLOR_TABLE[] = { LIGHTBLUE , LIGHTGREEN , LIGHTAQUA , LIGHTRED , LIGHTPURPLE , LIGHTYELLOW , BRIGHTWHITE };
+        
+        return COLOR_TABLE[i % 7];
+    }
+    
+    void _print()
+    {
+        cout << push_style << FOREGROUND << BLACK;
+        
+        for(unsigned int i = 0; i < _heap_array.size() ; ++i)
+            cout << BACKGROUND << _get_color(_heap_array[i]) /* cada nodo tiene un color, así es mas facil ver como cambia el heap */ << _heap_array[i] << BACKGROUND << BLACK << " ";
+        
+        cout << pop_style << endl;
+    }
+#endif
 public:
+    bool empty() const {return _heap_array.empty(); }
 
+    //Las trazas de las funciones quedan de la siguiente manera: https://twitter.com/Manu343726/status/341236064263995392/photo/1
+    //Me era mas facil de ver con colores.
+    
     void insert(const T& value)
     {
-        _heap_array.push_back(value); //Insertamos el valor al final del arbol
-        unsigned int index = _heap_array.size() - 1; //Empieza en el ultimo elemento.
-
-        while (!_is_root(index) && _heap_array[index] > _heap_array[_parent(index)])
+        unsigned int index;
+#ifdef DEBUGGING
+        cout << push_style << FOREGROUND << YELLOW << "Starting insert... (Pushing " << value << ")" << pop_style << endl;
+        cout << "BEGINING HEAP: "; _print();
+#endif     
+        _heap_array.push_back( value );
+        index = _heap_array.size() - 1;
+ 
+#ifdef DEBUGGING
+        cout << "(pushback)"; _print();
+#endif     
+        while( !_is_root( index ) && _heap_array[index] > _heap_array[_parent( index )] )
         {
-            //swap index <--> root_index. C++14 swap operator? ( :=: ) Like python?
-            T& tmp = _heap_array[index];
-            _heap_array[index] = _heap_array[_parent(index)];
-            _heap_array[_parent(index)] = tmp;
-
-            index = _parent(index);
+#ifdef DEBUGGING
+            cout << push_style << FOREGROUND << YELLOW << "swapping node " << _heap_array[index] << " (index " << index << ") with its parent (node " << _heap_array[_parent(index)] << ", index " << _parent( index ) << ")" << pop_style << endl;
+#endif
+            
+            T tmp( _heap_array[index] );
+            _heap_array[index] = _heap_array[_parent( index )];
+            _heap_array[_parent( index )] = tmp;
+            
+            index = _parent( index );
         }
+        
+#ifdef DEBUGGING
+        cout << "END HEAP: "; _print();
+        cout << push_style << FOREGROUND << YELLOW << "Insert finished" << pop_style << endl;
+#endif
     }
 
     //Erases the root (The maximum value)
-
     T erase()
     {
-        unsigned int index = _heap_array.size() - 1; //Empieza en el ultimo elemento.
-
-        T ret(_heap_array.first());
-        _heap_array.first() = _heap_array.last(); //Ponemos el ultimo elemento en la raiz.
-        //Después reordenamos el arbol:
-
-        while (index < _heap_array.size() - 1 && _heap_array[index] < _heap_array[_bigger_child(index)])
+        if( _heap_array.empty() ) return T();
+   
+#ifdef DEBUGGING
+        cout << push_style << FOREGROUND << YELLOW << "Starting erase..." << pop_style << endl;
+        cout << "BEGINING HEAP: "; _print();
+#endif       
+        unsigned int index = 0; //Empieza en la raiz.
+        
+        T ret( _heap_array.front() );
+        
+        _heap_array.front() = _heap_array.back();
+        _heap_array.pop_back();
+#ifdef DEBUGGING
+        cout << "(lesser swapped to front)"; _print();
+#endif      
+        _re_heap_tree(0);
+  
+#ifdef DEBUGGING 
+        cout << "END HEAP: "; _print();
+        cout << push_style << FOREGROUND << YELLOW << "erase finished (value " << ret << " popped)" << pop_style << endl;      
+#endif
+        return ret; //NRVO si no recuerdo mal. Hay que confiar en el optimizador...
+    }
+    
+    //Si, lo he copiado del pseudocódigo de la wikipedia. Me estaba haciendo un lío con la versión iterativa.
+    void _re_heap_tree(unsigned int node)
+    {
+        unsigned int largest = node;
+        unsigned int less    = _less_child( largest );
+        unsigned int bigger  = _bigger_child( largest );
+        
+        if( less < _heap_array.size() && _heap_array[less] > _heap_array[largest] )
+            largest = less;
+        
+        if( bigger < _heap_array.size() && _heap_array[bigger] > _heap_array[largest] )
+            largest = bigger;
+        
+        if( node != largest)
         {
-            //swap index <--> index_greater_child. C++14 swap operator? ( :=: ) Like python?
-            T& tmp = _heap_array[index];
-            _heap_array[index] = _heap_array[_bigger_child(index)];
-            _heap_array[_bigger_child(index)] = tmp;
-
-            index = _bigger_child(index);
+            T tmp = _heap_array[node];
+            _heap_array[node] = _heap_array[largest];
+            _heap_array[largest] = tmp;
+            
+#ifdef DEBUGGING
+            cout << push_style << FOREGROUND << YELLOW << "re_heapping... Actual: " << pop_style; _print();
+#endif
+            _re_heap_tree(largest);
         }
-
-        _heap_array.pop_back(); //Eliminamos el ultimo (Lo pusimos en la raiz al principio).
-
-        return ret; //RVO? Seguramente
     }
 
-    const T& max()
+    const T& top()
     {
-        return static_cast<const T&> (_heap_array.first());
+        return static_cast<const T&> (_heap_array.front());
     }
 };
+
+#if !defined( USE_STL )
 
 template<typename T>
 class PriorityQueue : public MaxHeap<T>
@@ -1166,7 +847,10 @@ public:
 
     void operation1(const T& value)
     {
-        this->insert(value);
+        this->insert(value); //this necesario por ambiguedad al heredar de plantillas (Por qué nunca me acuerdo, siempre tengo que volver a buscarlo?) 
+                             //http://stackoverflow.com/questions/4643074/why-do-i-have-to-access-template-base-class-members-through-the-this-pointer  
+                             //También conocido como: "Hola, me llamo C++, y tardo veinte años en compilar"
+                             //La verdad es que es mejor eso que cuando tienes que usar this->template function<template_parameter>() porque no tiene ni ida de lo que le estás diciendo...
     }
 
     T operation2()
@@ -1174,12 +858,39 @@ public:
         return this->erase();
     }
 };
+#else
+#include <queue>
+
+template<typename T>
+class PriorityQueue
+{
+private: 
+    std::priority_queue<int,std::vector<int>,std::less<int> > _queue;
+public:
+
+    void operation1(const T& value)
+    {
+        _queue.push(value); 
+    }
+
+    T operation2()
+    {
+        T tmp( _queue.top() );
+        _queue.pop();
+        return tmp; //Esto si que si, NRVO.
+    }
+    
+    bool empty() const {return _queue.empty(); }
+    unsigned int size() const {return _queue.size(); }
+    const T& top() const { return _queue.top(); }
+};
+#endif
 
 template<typename T>
 class Stack
 {
 private:
-#if USE_STL
+#ifdef USE_STL
     std::vector<T> _data;
 #else
     ListWrapper<T> _data;
@@ -1193,17 +904,19 @@ public:
 
     T operation2()
     {
-        T tmp(_data.last());
+        T tmp(_data.back());
         _data.pop_back();
         return tmp;
     }
+    
+    bool empty() const {return _data.empty(); }
 };
 
 template<typename T>
 class Queue
 {
 private:
-#if USE_STL
+#ifdef USE_STL
     std::vector<T> _data;
 #else
     ListWrapper<T> _data;
@@ -1212,19 +925,203 @@ public:
 
     void operation1(const T& value)
     {
-        _data.push_front(value);
+        _data.insert( _data.begin() , value );
     }
 
     T operation2()
     {
-        T tmp(_data.last());
+        T tmp(_data.back());
         _data.pop_back();
         return tmp;
     }
+    
+    bool empty() const {return _data.empty(); }
 };
+
+enum TADOperation
+{
+    OP1 = 1, OP2 = 2
+};
+
+struct TADType
+{
+    bool couldBeStack;
+    bool couldBeQueue;
+    bool couldBePriorityQueue;
+
+    //Deprecated in modern C++, use static const string instead. In modern C++, raw strings are std::string, not const char*.
+    //Lo pongo porque GCC no hace más que refunfuñar. Estoy con GCC8.0, en modo C++98, pero aún así refunfuña.
+    static const char* IS_STACK;
+    static const char* IS_QUEUE;
+    static const char* IS_PRIORITY_QUEUE;
+    static const char* COULD_BE_MORE_THAN_ONE_TAD;
+    static const char* IS_NOT_ANY_OF_OUR_TADS;
+
+    TADType() : couldBeStack(true), couldBeQueue(true), couldBePriorityQueue(true)
+    {
+    }
+
+    const char* result()
+    {
+        //A que habría molado hacerlo con un bitset y una lookup table?
+
+        if (couldBeStack && !couldBeQueue && !couldBePriorityQueue) return IS_STACK;
+        if (!couldBeStack && couldBeQueue && !couldBePriorityQueue) return IS_QUEUE;
+        if (!couldBeStack && !couldBeQueue && couldBePriorityQueue) return IS_PRIORITY_QUEUE;
+
+        if (!couldBeStack && !couldBeQueue && !couldBePriorityQueue) return IS_NOT_ANY_OF_OUR_TADS;
+
+        return COULD_BE_MORE_THAN_ONE_TAD;
+    }
+};
+
+const char* TADType::IS_STACK = "stack";
+const char* TADType::IS_QUEUE = "queue";
+const char* TADType::IS_PRIORITY_QUEUE          = "priority queue";
+const char* TADType::COULD_BE_MORE_THAN_ONE_TAD = "not sure";
+const char* TADType::IS_NOT_ANY_OF_OUR_TADS     = "impossible";
+
+inline bool is_valid(TADOperation op)//Creo que al final no la he usado
+{
+    return op == OP1 || op == OP2;
+}
+
+istream& operator>>(istream& is , TADOperation& op)
+{
+    int integer;
+    is >> integer;
+    op = (TADOperation)integer;
+    return is;
+}
+
+void UVA11995(istream& is)
+{
+    while (is.good()) // is good, muy apropiado...
+    {
+        unsigned int set_operations_count;
+        TADType results;
+        Stack<int> stack;
+        Queue<int> queue;
+        PriorityQueue<int> priority_queue;
+
+        is >> set_operations_count;
+
+        for (unsigned int i = 0; i < set_operations_count; ++i)
+        {
+            TADOperation operation;
+            int aux_value;
+
+            is >> operation;
+            is >> aux_value;
+
+            switch (operation)
+            {
+                case OP1:
+                    stack.operation1(aux_value);
+                    queue.operation1(aux_value);
+                    priority_queue.operation1(aux_value);
+                    break;
+                case OP2:
+                    //NOTA: Es cierto, son operadores de bits, no lógicos, C++ no provee &&= o ||=. Pero funciona como se espera (true es 0x00000001 y false es 0x00000000)
+                    results.couldBeStack &= !stack.empty() && stack.operation2() == aux_value; //Lo malo de que no sean operadores lógicos, es que no tienen lazy-evaluation. Si fuera así, en el momento en el que could fuera false, no volvería a ejecutar nada de ésto (Lo que estaría muy bien).
+                    results.couldBeQueue &= !queue.empty() && queue.operation2() == aux_value;
+                    results.couldBePriorityQueue &= !priority_queue.empty() && priority_queue.operation2() == aux_value;
+                    break;
+                default:
+                    throw "ERROR AL LEER LA ENTRADA (CABUUUUUUM!)";//Espero no ver ningún cabuum...
+            }
+        }
+
+        cout << results.result() << endl;
+    }
+}
+
+#define PRIORITY_QUEUE_TEST
+
+#if defined(PRIORITY_QUEUE_TEST) && defined(DEBUGGING)
+
+#if !defined(USE_STL) //Si estoy usando la stl, queue ya se incluyó en MaxHeap.
+#include <queue>
+#endif
+
+#include <stdlib.h> //La STL actualmente provee ua biblioteca entera con tropecientos generadores de numeros pseudoaleatorios: http://en.cppreference.com/w/cpp/numeric/random
+#include <time.h>
+#include <mmsystem.h>
+
+const unsigned int TESTS_COUNT = 1000;
+
+void test()
+{
+    PriorityQueue<int> my_queue;
+    std::priority_queue<int,std::vector<int>,std::less<int> > stl_queue;
+    
+    srand( time(NULL) );
+    
+    unsigned int pass_count  = 0;
+    unsigned int fail_count  = 0;
+    unsigned int total_tests = 0;
+    
+    unsigned int push_fails = 0;
+    unsigned int push_pass  = 0;
+    unsigned int pop_fails = 0;
+    unsigned int pop_pass  = 0;
+    
+    bool passed;
+    
+#define internal_assert(x) assert( passed = (x) ); total_tests++; if( passed ) { pass_count++; } else { fail_count++; }
+#define assert_push(x) internal_assert(x); if( passed ) { push_pass++; } else { push_fails++; }
+#define assert_pop(x)  internal_assert(x); if( passed ) { pop_pass++;  } else { pop_fails++; }
+    
+    for(unsigned int i = 0 ; i < TESTS_COUNT ; ++i)
+    {
+        cout << push_style << FOREGROUND << GRAY << "starting test " << i+1 << "..." << pop_style << endl;
+        
+        TADOperation operation = (rand() % 2 == 0) ? OP1 : OP2;
+        int number_for_push    = rand();
+        unsigned int actual_passed = pass_count;
+        
+        if( operation == OP1 )
+        {
+            cout << push_style << FOREGROUND << GRAY << "PUSH TEST" << pop_style << endl;
+            
+            my_queue.operation1( number_for_push );
+            stl_queue.push( number_for_push );
+            
+            assert_push( my_queue.top() == stl_queue.top() );
+            
+            cout << push_style << FOREGROUND << GRAY << "END OF PUSH TEST" << pop_style << endl;
+        }
+        else
+        {
+            cout << push_style << FOREGROUND << GRAY << "POP TEST" << pop_style << endl;
+            
+            assert_pop( my_queue.empty() == stl_queue.empty() );
+                    
+            if( !my_queue.empty() && !stl_queue.empty() )
+            {
+                assert_pop( my_queue.operation2() == stl_queue.top() );
+                cout << "STLQUEUE TOP: " << stl_queue.top() << endl;
+                stl_queue.pop();
+            }
+            
+            cout << push_style << FOREGROUND << GRAY << "END OF POP TEST" << pop_style << endl;
+        }
+    }
+    
+    cout << endl << "total tests executed: " << total_tests << endl;
+    cout << " - Tests passed: " << pass_count << " (" << push_pass << " push tests passed. " << pop_pass << " pop tests passed)" << endl;
+    cout << " - Tests failed: " << fail_count << " (" << push_fails << " push tests failed. " << pop_fails << " pop tests failed)" << endl << endl;
+}
+
+#endif /* PRIORITY_QUEUE_TEST */
 
 int main()
 {
+#if defined( PRIORITY_QUEUE_TEST ) && defined( DEBUGGING )
+    test();
+#else
+    UVA11995(cin);
+#endif /* PRIORITY_QUEUE_TEST */
     return 0;
 }
 

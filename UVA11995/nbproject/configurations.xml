@@ -16,6 +16,7 @@
     </logicalFolder>
     <logicalFolder name="utils" displayName="utils" projectFiles="true">
       <itemPath>utils/dl32Config.h</itemPath>
+      <itemPath>../UVA11995/utils/dl32ConsoleColor.cpp</itemPath>
       <itemPath>utils/dl32ConsoleColor.h</itemPath>
       <itemPath>utils/dl32Exceptions.h</itemPath>
       <itemPath>utils/dl32Singleton.h</itemPath>
@@ -49,6 +50,11 @@
           <standard>4</standard>
         </ccTool>
       </compileType>
+      <item path="../UVA11995/utils/dl32ConsoleColor.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="utils/dl32Config.h" ex="false" tool="3" flavor2="0">
@@ -81,6 +87,11 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="../UVA11995/utils/dl32ConsoleColor.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="utils/dl32Config.h" ex="false" tool="3" flavor2="0">
