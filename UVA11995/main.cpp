@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <sstream>
 using namespace std;
 
 //NOTA: Antes de nada me gustaría disculparme por si parece que mis anotaciones son algo "bizarras". Las voy escribiendo para aclararme, 
@@ -996,7 +997,7 @@ istream& operator>>(istream& is , TADOperation& op)
 
 void UVA11995(istream& is)
 {
-    while (is.good()) // is good, muy apropiado...
+    while ( !is.eof() ) // while is good, muy apropiado...
     {
         unsigned int set_operations_count;
         TADType results;
@@ -1023,9 +1024,9 @@ void UVA11995(istream& is)
                     break;
                 case OP2:
                     //NOTA: Es cierto, son operadores de bits, no lógicos, C++ no provee &&= o ||=. Pero funciona como se espera (true es 0x00000001 y false es 0x00000000)
-                    results.couldBeStack &= !stack.empty() && stack.operation2() == aux_value; //Lo malo de que no sean operadores lógicos, es que no tienen lazy-evaluation. Si fuera así, en el momento en el que could fuera false, no volvería a ejecutar nada de ésto (Lo que estaría muy bien).
-                    results.couldBeQueue &= !queue.empty() && queue.operation2() == aux_value;
-                    results.couldBePriorityQueue &= !priority_queue.empty() && priority_queue.operation2() == aux_value;
+                    results.couldBeStack &= ( !stack.empty() && stack.operation2() == aux_value ); //Lo malo de que no sean operadores lógicos, es que no tienen lazy-evaluation. Si fuera así, en el momento en el que could fuera false, no volvería a ejecutar nada de ésto (Lo que estaría muy bien).
+                    results.couldBeQueue &= ( !queue.empty() && queue.operation2() == aux_value );
+                    results.couldBePriorityQueue &= ( !priority_queue.empty() && priority_queue.operation2() == aux_value );
                     break;
                 default:
                     throw "ERROR AL LEER LA ENTRADA (CABUUUUUUM!)";//Espero no ver ningún cabuum...
@@ -1115,12 +1116,142 @@ void test()
 
 #endif /* PRIORITY_QUEUE_TEST */
 
+const bool testing_input = true;
+
+const char* TEST_INPUT = "8 \n"
+                        "1 36 \n"
+                        "1 65 \n"
+                        "2 65 \n"
+                        "1 75 \n"
+                        "1 62 \n"
+                        "1 42 \n"
+                        "1 58 \n"
+                        "2 75 \n"
+                        "10 \n"
+                        "1 84 \n"
+                        "1 59 \n"
+                        "1 51 \n"
+                        "2 51 \n"
+                        "1 41 \n"
+                        "1 59 \n"
+                        "2 59 \n"
+                        "1 70 \n"
+                        "1 67 \n"
+                        "2 67 \n"
+                        "10 \n"
+                        "1 24 \n"
+                        "1 37 \n"
+                        "1 87 \n"
+                        "1 25 \n"
+                        "1 74 \n"
+                        "1 9 \n"
+                        "2 87 \n"
+                        "1 64 \n"
+                        "1 49 \n"
+                        "2 74 \n"
+                        "7 \n"
+                        "1 84 \n"
+                        "1 36 \n"
+                        "1 61 \n"
+                        "1 4 \n"
+                        "2 4 \n"
+                        "1 61 \n"
+                        "2 61 \n"
+                        "8 \n"
+                        "1 76 \n"
+                        "1 83 \n"
+                        "1 22 \n"
+                        "1 11 \n"
+                        "1 8 \n"
+                        "1 48 \n"
+                        "2 83 \n"
+                        "1 90 \n"
+                        "9 \n"
+                        "1 1 \n"
+                        "2 1 \n"
+                        "1 36 \n"
+                        "1 85 \n"
+                        "1 4 \n"
+                        "2 4 \n"
+                        "1 51 \n"
+                        "1 15 \n"
+                        "2 15 \n"
+                        "9 \n"
+                        "1 64 \n"
+                        "1 85 \n"
+                        "1 33 \n"
+                        "1 34 \n"
+                        "1 58 \n"
+                        "1 70 \n"
+                        "2 85 \n"
+                        "2 69 \n"
+                        "2 64 \n"
+                        "9 \n"
+                        "1 72 \n"
+                        "1 20 \n"
+                        "2 72 \n"
+                        "2 20 \n"
+                        "1 89 \n"
+                        "1 60 \n"
+                        "1 39 \n"
+                        "2 89 \n"
+                        "1 77 \n"
+                        "5 \n"
+                        "1 63 \n"
+                        "2 63 \n"
+                        "1 57 \n"
+                        "1 66 \n"
+                        "1 73 \n"
+                        "2 \n"
+                        "1 49 \n"
+                        "2 49 \n"
+                        "10 \n"
+                        "1 48 \n"
+                        "1 90 \n"
+                        "1 81 \n"
+                        "2 48 \n"
+                        "1 42 \n"
+                        "2 90 \n"
+                        "2 81 \n"
+                        "2 42 \n"
+                        "1 44 \n"
+                        "1 63 \n"
+                        "7 \n"
+                        "1 88 \n"
+                        "1 63 \n"
+                        "2 88 \n"
+                        "1 90 \n"
+                        "2 63 \n"
+                        "1 73 \n"
+                        "1 15 \n"
+                        "3 \n"
+                        "1 86 \n"
+                        "1 64 \n"
+                        "2 86 \n"
+                        "7 \n"
+                        "1 38 \n"
+                        "1 68 \n"
+                        "1 14 \n"
+                        "2 38 \n"
+                        "1 27 \n"
+                        "1 83 \n"
+                        "2 68";
+
 int main()
 {
 #if defined( PRIORITY_QUEUE_TEST ) && defined( DEBUGGING )
     test();
 #else
-    UVA11995(cin);
+    if( testing_input )
+    {
+        stringstream strs( TEST_INPUT , ios_base::in );
+        UVA11995( strs );
+        
+        cin.sync();
+        cin.get();
+    }
+    else
+        UVA11995(cin);
 #endif /* PRIORITY_QUEUE_TEST */
     return 0;
 }
