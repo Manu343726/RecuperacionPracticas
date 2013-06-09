@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <functional> //Functors estándar para comparación (Ver implementación de heap)
 using namespace std;
 
 //NOTA: Antes de nada me gustaría disculparme por si parece que mis anotaciones son algo "bizarras". Las voy escribiendo para aclararme, 
@@ -35,10 +36,10 @@ using namespace std;
 * Cuento todo ésto para pasar por encima todas las "cosas raras" que puedan encontrarse durante la corrección.         *
 *                                                                                                                      *
 * Desactivando el modo de depuración, se deshabilitan todos esos includes (Para seguir a rajatabla las reglas de la    *
-* entrega) y se deshabilita también la macro assert.                                                                   *
+* entrega).                                                                   *
 ***********************************************************************************************************************/
 
-//#define DEBUGGING
+#define DEBUGGING
 
 #ifdef DEBUGGING
 
@@ -94,6 +95,8 @@ using namespace std;
  * WARNING: ENTERING FREAK-ZONE *
  *******************************/
 
+//Esto cuenta como práctica de EDA? http://stackoverflow.com/questions/16981974/compile-time-quicksort-passing-comparer-as-template-parameter (Sí, soy muy friki. Éstas cosas son las que hago para entretenerme...)
+
 /* enable_if necesario para wrapper de iterador (operator-> solo tiene sentido para clases, no para tipos básicos) */
 template<bool flag, typename T>
 struct enable_if;
@@ -128,6 +131,32 @@ private:
     template<typename U> static _big   _checker(...);
 public:
     static const bool value = sizeof ( _checker<T>(NULL)) == _small_size;
+};
+
+
+//Select type necesario para implementación de heap (Heap tiene un parámetro IS_MAX_HEAP, con el que elegimos el comparador)
+template<bool flag , typename T , typename U>
+class select_type
+{
+private:
+    template<bool _flag , typename _T , typename _U>
+    struct _select;
+    
+    template<typename _T , typename _U>
+    struct _select<true,_T,_U>
+    {
+        typedef _T type;
+    };
+    
+    template<typename _T , typename _U>
+    struct _select<false,_T,_U>
+    {
+        typedef _U type;
+    };
+    
+public:
+    
+    typedef typename _select<flag,T,U>::type type;
 };
 
 /*********************
@@ -525,7 +554,7 @@ private:
 
 #include <cmath>
 
-#define USE_STL
+//#define USE_STL
 
 #ifdef USE_STL
 #include <vector>
@@ -618,20 +647,6 @@ public:
         return const_cast<T&> (_underlying_tad.elem(index));
     }
 
-    //O(n)... Creo que al final no la uso (De hecho, creo que me la he inventado... que la de std::vector no es así...)
-    void insert(const T& value, unsigned int index)
-    {
-        if (index < 0 || index >= size()) return;
-        typename Lista<T>::Iterador it = _underlying_tad.principio();
-
-        for (unsigned int i = 0; i < index; ++i)
-        {
-            it.avanza();
-        }
-
-        _underlying_tad.insertar(value, it);
-    }
-
     void insert(const iterator& it , const T& value)
     {
         _underlying_tad.insertar(value, it._underlying_iterator);
@@ -690,14 +705,24 @@ public:
  *
  *PD: Me he fijado que el enlace que está en el post está roto (Es el enlace del MSDN es raro...La presentación está en Channel 9): http://www.ii.uni.wroc.pl/~nivelle/C++11_style_Wroclaw.pdf
 */
-/*************************************************************
- * Implementación de cola de prioridad usando un heap máximo *
- ************************************************************/
 
-template<typename T>
-class MaxHeap
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Binary heap implementation
+///
+/// @author	Manu343726
+///
+/// @tparm T Type of heap elements.
+/// @tparam IS_MAX_PRIORITY_QUEUE If is set to true, the heap is a max heap. If is set to false,
+///         the heap is a min heap.
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename T , bool IS_MAX_PRIORITY_QUEUE = true>
+class Heap
 {
 private:
+    typedef typename select_type<!IS_MAX_PRIORITY_QUEUE,std::less<T>,std::greater<T> >::type my_comparer;
+    my_comparer _comparer;
+    
 #ifdef USE_STL
     std::vector<T> _heap_array;
 #else
@@ -725,11 +750,11 @@ private:
     }
  
 #ifdef DEBUGGING
-    dl32ConsoleColor _get_color(unsigned int i)
+    static dl32ConsoleColor _get_color(unsigned int i)
     {
         static const dl32ConsoleColor COLOR_TABLE[] = { LIGHTBLUE , LIGHTGREEN , LIGHTAQUA , LIGHTRED , LIGHTPURPLE , LIGHTYELLOW , BRIGHTWHITE };
         
-        return COLOR_TABLE[i % 7];
+        return COLOR_TABLE[i % 7];// Así cada número tiene un color asociado, y es mas facil ver como el heap va cambiando
     }
     
     void _print()
@@ -753,7 +778,7 @@ public:
         unsigned int index;
 #ifdef DEBUGGING
         cout << push_style << FOREGROUND << YELLOW << "Starting insert... (Pushing " << value << ")" << pop_style << endl;
-        cout << "BEGINING HEAP: "; _print();
+        cout << "BEGIN HEAP: "; _print();
 #endif     
         _heap_array.push_back( value );
         index = _heap_array.size() - 1;
@@ -761,10 +786,10 @@ public:
 #ifdef DEBUGGING
         cout << "(pushback)"; _print();
 #endif     
-        while( !_is_root( index ) && _heap_array[index] > _heap_array[_parent( index )] )
+        while( !_is_root( index ) && _comparer( _heap_array[index] , _heap_array[_parent( index )] ) )
         {
 #ifdef DEBUGGING
-            cout << push_style << FOREGROUND << YELLOW << "swapping node " << _heap_array[index] << " (index " << index << ") with its parent (node " << _heap_array[_parent(index)] << ", index " << _parent( index ) << ")" << pop_style << endl;
+            cout << push_style << FOREGROUND << YELLOW << "swapping node " << _heap_array[index] << " (index " << index << ") with its parent (node " << _heap_array[_parent(index)] << ", index " << _parent( index ) << ")" << pop_style << endl; _print();
 #endif
             
             T tmp( _heap_array[index] );
@@ -787,7 +812,7 @@ public:
    
 #ifdef DEBUGGING
         cout << push_style << FOREGROUND << YELLOW << "Starting erase..." << pop_style << endl;
-        cout << "BEGINING HEAP: "; _print();
+        cout << "BEGIN HEAP: "; _print();
 #endif       
         unsigned int index = 0; //Empieza en la raiz.
         
@@ -814,10 +839,10 @@ public:
         unsigned int less    = _less_child( largest );
         unsigned int bigger  = _bigger_child( largest );
         
-        if( less < _heap_array.size() && _heap_array[less] > _heap_array[largest] )
+        if( less < _heap_array.size() && _comparer( _heap_array[less] , _heap_array[largest] ) )
             largest = less;
         
-        if( bigger < _heap_array.size() && _heap_array[bigger] > _heap_array[largest] )
+        if( bigger < _heap_array.size() && _comparer( _heap_array[bigger] , _heap_array[largest] ) )
             largest = bigger;
         
         if( node != largest)
@@ -841,8 +866,8 @@ public:
 
 #if !defined( USE_STL )
 
-template<typename T>
-class PriorityQueue : public MaxHeap<T>
+template<typename T , bool IS_MAX_PRIORITY_QUEUE = true>
+class PriorityQueue : public Heap<T,IS_MAX_PRIORITY_QUEUE>
 {
 public:
 
@@ -862,11 +887,11 @@ public:
 #else
 #include <queue>
 
-template<typename T>
+template<typename T , bool IS_MAX_PRIORITY_QUEUE = true> 
 class PriorityQueue
 {
 private: 
-    std::priority_queue<int,std::vector<int>,std::less<int> > _queue;
+    std::priority_queue<int,std::vector<int>, typename select_type<IS_MAX_PRIORITY_QUEUE , std::less<int> , std::greater<int> >::type > _queue;
 public:
 
     void operation1(const T& value)
@@ -887,6 +912,11 @@ public:
 };
 #endif
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Stack wrapper
+///
+/// @author	Manu343726
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename T>
 class Stack
 {
@@ -913,6 +943,11 @@ public:
     bool empty() const {return _data.empty(); }
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Queue wrapper
+///
+/// @author	Manu343726
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename T>
 class Queue
 {
@@ -941,7 +976,7 @@ public:
 
 enum TADOperation
 {
-    OP1 = 1, OP2 = 2
+    OP1 = 1, OP2 = 2 //Así es más facil de leer.
 };
 
 struct TADType
@@ -951,7 +986,7 @@ struct TADType
     bool couldBePriorityQueue;
 
     //Deprecated in modern C++, use static const string instead. In modern C++, raw strings are std::string, not const char*.
-    //Lo pongo porque GCC no hace más que refunfuñar. Estoy con GCC8.0, en modo C++98, pero aún así refunfuña.
+    //Lo pongo porque GCC no hace más que refunfuñar. Estoy con GCC4.8.0, en modo C++98, pero aún así refunfuña.
     static const char* IS_STACK;
     static const char* IS_QUEUE;
     static const char* IS_PRIORITY_QUEUE;
@@ -995,9 +1030,11 @@ istream& operator>>(istream& is , TADOperation& op)
     return is;
 }
 
+//Se que mi priority_queue está mal (Ver nota de abajo, en el test), pero he enviado a la UVA una versión que utiliza la STL
+// y aún así me da wrong answer. Estoy perplejo. 
 void UVA11995(istream& is)
 {
-    while ( !is.eof() ) // while is good, muy apropiado...
+    while ( is.good() ) // while is good, muy apropiado... (NOTA: También envié una versión con is.eof(), y nada. Así que no es eso)
     {
         unsigned int set_operations_count;
         TADType results;
@@ -1039,22 +1076,27 @@ void UVA11995(istream& is)
 
 #define PRIORITY_QUEUE_TEST
 
+//Un pequeño test para mi implementación de priority queue.
+//NOTA: He corrido tests de 10.000 operaciones, y he comprobado que push está bien, pero pop no. Lo he mirado un montón de 
+//      veces y sigo sin ver que está mal.
 #if defined(PRIORITY_QUEUE_TEST) && defined(DEBUGGING)
 
-#if !defined(USE_STL) //Si estoy usando la stl, queue ya se incluyó en MaxHeap.
+#if !defined(USE_STL) //Si estoy usando la stl, queue ya se incluyó en Heap.
 #include <queue>
 #endif
 
-#include <stdlib.h> //La STL actualmente provee ua biblioteca entera con tropecientos generadores de numeros pseudoaleatorios: http://en.cppreference.com/w/cpp/numeric/random
+#include <stdlib.h> //La STL actualmente provee ua biblioteca entera con tropecientos generadores de números pseudoaleatorios: http://en.cppreference.com/w/cpp/numeric/random
 #include <time.h>
 #include <mmsystem.h>
 
-const unsigned int TESTS_COUNT = 1000;
+const unsigned int TESTS_COUNT = 100;
+const bool TEST_MAX_PRIORITY_QUEUE = false;
+const bool TEST_PUSH_ONLY = true;
 
 void test()
 {
-    PriorityQueue<int> my_queue;
-    std::priority_queue<int,std::vector<int>,std::less<int> > stl_queue;
+    PriorityQueue<int,TEST_MAX_PRIORITY_QUEUE> my_queue;
+    std::priority_queue<int,std::vector<int>, typename select_type<TEST_MAX_PRIORITY_QUEUE , std::less<int> , std::greater<int> >::type > stl_queue;
     
     srand( time(NULL) );
     
@@ -1077,7 +1119,7 @@ void test()
     {
         cout << push_style << FOREGROUND << GRAY << "starting test " << i+1 << "..." << pop_style << endl;
         
-        TADOperation operation = (rand() % 2 == 0) ? OP1 : OP2;
+        TADOperation operation = TEST_PUSH_ONLY ? OP1 : ((rand() % 2 == 0) ? OP1 : OP2);
         int number_for_push    = rand();
         unsigned int actual_passed = pass_count;
         
